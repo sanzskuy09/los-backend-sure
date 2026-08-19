@@ -1,0 +1,73 @@
+const express = require("express");
+const router = express.Router();
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const { data_dokumen_foto } = require("../models");
+
+// Konfigurasi Multer
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const application_id = req.params.application_id;
+
+    if (!application_id) {
+      return cb(new Error("application_id is required in the URL"), null);
+    }
+
+    const appFolder = path.join(__dirname, "..", "uploads", application_id);
+
+    // Buat folder jika belum ada
+    if (!fs.existsSync(appFolder)) {
+      fs.mkdirSync(appFolder, { recursive: true });
+    }
+
+    cb(null, appFolder);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
+
+// Endpoint upload dengan subfolder per application_id
+router.post("/uploads/:application_id", upload.single("file"), async (req, res) => {
+  const application_id = req.params.application_id;
+  const { nik, field } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+
+  if (!application_id || !nik || !field) {
+    return res.status(400).json({ error: "application_id, nik, dan field wajib diisi" });
+  }
+
+  const filePath = `/uploads/${application_id}/${req.file.filename}`; // untuk disimpan di DB
+
+  try {
+    const existing = await data_dokumen_foto.findOne({ where: { application_id, nik } });
+
+    if (existing) {
+      await existing.update({ [field]: filePath });
+      return res.json({ message: `Berhasil update ${field}`, filePath });
+    } else {
+      const newData = {
+        application_id,
+        nik,
+        [field]: filePath,
+      };
+      await data_dokumen_foto.create(newData);
+      return res.status(201).json({
+        message: "Berhasil insert data baru",
+        filePath,
+      });
+    }
+  } catch (err) {
+    console.error("Upload error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
