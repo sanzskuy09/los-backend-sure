@@ -45,4 +45,6 @@ router.post("/cabang", controllerCabang.createCabang);
 router.put("/cabang/:id", controllerCabang.updateCabang);
 router.delete("/cabang/:id", controllerCabang.deleteCabang);
 
+router.get("/audit-trail", controller.getAuditTrail);
+
 module.exports = router;

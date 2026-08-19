@@ -16,7 +16,18 @@ const {
   data_kontak_darurat,
   data_pemohon_o,
   data_perhitungan_kredit,
+  AuditTrail
 } = db;
+
+exports.getAuditTrail = async (req, res) => {
+  try {
+    const data_audit_trail = await AuditTrail.findAll();
+
+    res.status(200).json({ data_audit_trail });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 exports.updateDealerApplication = async (req, res) => {
   try {
